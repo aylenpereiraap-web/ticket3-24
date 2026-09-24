@@ -1,0 +1,862 @@
+<title>Sala de Salida</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #0a0e17;
+    --panel: #141b2e;
+    --panel-hi: #1b2440;
+    --edge: #2a3556;
+    --violet: #7c5cff;
+    --violet-soft: #9b85ff;
+    --cyan: #2dd4e8;
+    --gold: #f0b93a;
+    --gold-soft: #ffd571;
+    --success: #34d399;
+    --danger: #fb6b6b;
+    --amber: #f5b544;
+    --text: #eef1fb;
+    --muted: #8992ac;
+    --shadow: 0 20px 60px -20px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0; overflow-x:hidden;}
+  body{
+    background: var(--bg);
+    color:var(--text);
+    font-family:'Manrope', system-ui, sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+  ::selection{background:var(--violet); color:#fff;}
+
+  .noise{position:fixed; inset:0; pointer-events:none; opacity:.035; z-index:0; background-image: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px);}
+
+  .blob{position:fixed; border-radius:50%; filter:blur(70px); pointer-events:none; z-index:0; opacity:.5;}
+  .blob1{width:520px; height:520px; background:radial-gradient(circle, rgba(124,92,255,.55), transparent 70%); top:-160px; left:-120px; animation:drift1 22s ease-in-out infinite alternate;}
+  .blob2{width:460px; height:460px; background:radial-gradient(circle, rgba(45,212,232,.4), transparent 70%); top:10%; right:-160px; animation:drift2 26s ease-in-out infinite alternate;}
+  .blob3{width:380px; height:380px; background:radial-gradient(circle, rgba(240,185,58,.28), transparent 70%); bottom:-140px; left:20%; animation:drift3 30s ease-in-out infinite alternate;}
+  @keyframes drift1{ from{transform:translate(0,0) scale(1);} to{transform:translate(60px,50px) scale(1.15);} }
+  @keyframes drift2{ from{transform:translate(0,0) scale(1);} to{transform:translate(-50px,40px) scale(1.1);} }
+  @keyframes drift3{ from{transform:translate(0,0) scale(1);} to{transform:translate(40px,-30px) scale(1.2);} }
+
+  #app{position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:22px 20px 20px; display:flex; flex-direction:column; gap:22px;}
+
+  /* ---------- HUD ---------- */
+  .hud{
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    background:linear-gradient(180deg, var(--panel), var(--panel-hi));
+    border:1px solid var(--edge); border-radius:16px; padding:14px 20px; box-shadow:var(--shadow);
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-icon{
+    width:40px; height:40px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 30% 25%, var(--violet-soft), var(--violet) 65%);
+    border-radius:10px; box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 8px 20px -8px rgba(124,92,255,.8);
+    animation:iconPulse 3.2s ease-in-out infinite;
+  }
+  @keyframes iconPulse{ 0%,100%{ box-shadow:0 0 0 1px rgba(255,255,255,.08) inset, 0 8px 20px -8px rgba(124,92,255,.8);} 50%{ box-shadow:0 0 0 1px rgba(255,255,255,.14) inset, 0 8px 28px -4px rgba(124,92,255,1);} }
+  .brand h1{font-family:'Unbounded', sans-serif; font-weight:700; font-size:1.05rem; margin:0; letter-spacing:.01em; line-height:1.15;}
+  .brand p{margin:2px 0 0; font-size:.72rem; color:var(--muted); letter-spacing:.06em; text-transform:uppercase;}
+
+  .hud-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .hud-stats{display:flex; align-items:center; gap:20px;}
+  .stat{text-align:right;}
+  .stat .label{font-size:.65rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:0 0 2px;}
+  .stat .value{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:1.15rem; font-variant-numeric:tabular-nums; color:var(--text); transition:transform .2s ease;}
+  .stat.score .value{color:var(--cyan);}
+  .stat .value.bump{animation:bump .35s ease;}
+  @keyframes bump{ 0%{transform:scale(1);} 40%{transform:scale(1.35); color:var(--gold-soft);} 100%{transform:scale(1);} }
+
+  .dice-btn{
+    display:flex; align-items:center; gap:9px; font-family:'Unbounded', sans-serif; font-weight:700; font-size:.82rem;
+    color:#241505; background:linear-gradient(135deg, var(--gold-soft), var(--gold)); border:none; border-radius:11px;
+    padding:11px 18px; cursor:pointer; box-shadow:0 10px 22px -8px rgba(240,185,58,.55);
+    transition:transform .15s ease, box-shadow .15s ease; white-space:nowrap;
+  }
+  .dice-btn:hover{transform:translateY(-2px) scale(1.03); box-shadow:0 14px 26px -6px rgba(240,185,58,.7);}
+  .dice-btn svg{width:18px; height:18px; stroke:#241505;}
+
+  /* ---------- PROGRESS ---------- */
+  .progress-wrap{display:none; align-items:center; gap:10px;}
+  .progress-wrap.show{display:flex;}
+  .progress-track{display:flex; gap:5px; flex:1;}
+  .tick{height:8px; flex:1; border-radius:3px; background:var(--edge); transition:background .35s ease, box-shadow .35s ease, transform .3s ease;}
+  .tick.correct{background:var(--success); box-shadow:0 0 10px rgba(52,211,153,.6); animation:tickPop .4s ease;}
+  .tick.wrong{background:var(--danger); box-shadow:0 0 10px rgba(251,107,107,.6); animation:tickPop .4s ease;}
+  @keyframes tickPop{ 0%{transform:scaleY(1);} 40%{transform:scaleY(2.4);} 100%{transform:scaleY(1);} }
+
+  /* ---------- INTRO ---------- */
+  .intro{
+    background:linear-gradient(180deg, var(--panel), var(--panel-hi)); border:1px solid var(--edge); border-radius:20px;
+    padding:40px clamp(20px,5vw,56px); box-shadow:var(--shadow);
+    display:flex; flex-direction:column; align-items:flex-start; gap:16px; position:relative; overflow:hidden;
+  }
+  .intro::before{content:''; position:absolute; top:-40%; right:-15%; width:420px; height:420px; background:radial-gradient(circle, rgba(240,185,58,.2), transparent 70%); pointer-events:none; animation:drift3 18s ease-in-out infinite alternate;}
+  .eyebrow{font-family:'JetBrains Mono', monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); display:flex; align-items:center; gap:8px;}
+  .eyebrow::before{content:''; width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation:dotBlink 1.6s ease-in-out infinite;}
+  @keyframes dotBlink{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+  .intro h2{font-family:'Unbounded', sans-serif; font-weight:800; font-size:clamp(1.6rem, 4vw, 2.5rem); margin:0; line-height:1.12; max-width:20ch; text-wrap:balance;}
+  .intro h2 span{color:var(--gold-soft);}
+  .intro p{margin:0; max-width:58ch; color:var(--muted); font-size:1rem; line-height:1.55;}
+  .intro-meta{display:flex; gap:22px; flex-wrap:wrap; margin-top:6px;}
+  .meta-chip{display:flex; align-items:center; gap:8px; font-size:.82rem; color:var(--text); background:rgba(255,255,255,.04); border:1px solid var(--edge); padding:8px 14px; border-radius:999px;}
+  .meta-chip svg{width:16px; height:16px; stroke:var(--cyan); flex:none;}
+  .start-btn{
+    margin-top:10px; font-family:'Unbounded', sans-serif; font-weight:700; font-size:.95rem; color:#0a0e17;
+    background:linear-gradient(135deg, var(--cyan), var(--violet-soft)); border:none; border-radius:12px; padding:15px 30px;
+    cursor:pointer; letter-spacing:.02em; box-shadow:0 14px 30px -10px rgba(124,92,255,.55);
+    transition:transform .15s ease, box-shadow .15s ease; display:flex; align-items:center; gap:10px;
+  }
+  .start-btn:hover{transform:translateY(-2px) scale(1.02); box-shadow:0 18px 34px -8px rgba(124,92,255,.7);}
+
+  /* ---------- GRID ---------- */
+  .grid-wrap{display:none;}
+  .grid-wrap.active{display:block;}
+  .grid-title{display:flex; align-items:baseline; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:16px;}
+  .grid-title h3{font-family:'Unbounded', sans-serif; font-size:1.05rem; margin:0; font-weight:700;}
+  .grid-title span{font-size:.8rem; color:var(--muted);}
+
+  .capsules{display:grid; grid-template-columns:repeat(5, 1fr); gap:16px;}
+  @media (max-width:900px){ .capsules{grid-template-columns:repeat(4,1fr);} }
+  @media (max-width:640px){ .capsules{grid-template-columns:repeat(3,1fr);} }
+  @media (max-width:420px){ .capsules{grid-template-columns:repeat(2,1fr);} }
+
+  .capsule{
+    --cx: 20px; position:relative; aspect-ratio:1/1; isolation:isolate;
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(155,133,255,.16), transparent 55%),
+      linear-gradient(165deg, #26315a 0%, #182047 45%, #10152a 100%);
+    border:1.5px solid rgba(240,185,58,.28);
+    clip-path:polygon(var(--cx) 0, calc(100% - var(--cx)) 0, 100% var(--cx), 100% calc(100% - var(--cx)), calc(100% - var(--cx)) 100%, var(--cx) 100%, 0 calc(100% - var(--cx)), 0 var(--cx));
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text); padding:10px; overflow:hidden;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.14),
+      inset 0 -16px 22px -10px rgba(0,0,0,.6),
+      0 14px 26px -14px rgba(0,0,0,.75),
+      0 0 0 1px rgba(124,92,255,.12);
+    transition:transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease, border-color .22s ease;
+    opacity:0; transform:scale(.6) rotate(-10deg); animation:capsuleIn .55s cubic-bezier(.2,.9,.3,1.3) forwards;
+  }
+  @keyframes capsuleIn{ to{opacity:1; transform:scale(1) rotate(0);} }
+  .capsule:hover:not(.done){
+    transform:translateY(-9px) scale(1.06) rotate(-1.2deg);
+    border-color:rgba(240,185,58,.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.18),
+      inset 0 -16px 22px -10px rgba(0,0,0,.55),
+      0 26px 42px -14px rgba(124,92,255,.6),
+      0 0 0 1px rgba(240,185,58,.55),
+      0 0 34px -4px rgba(45,212,232,.35);
+  }
+  .capsule .shine{
+    position:absolute; top:-10%; left:0; width:38%; height:130%;
+    background:linear-gradient(115deg, transparent, rgba(255,255,255,.4), transparent);
+    transform:translateX(-160%) skewX(-15deg);
+    animation:shineSweep 4.8s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes shineSweep{ 0%{transform:translateX(-160%) skewX(-15deg);} 28%{transform:translateX(340%) skewX(-15deg);} 100%{transform:translateX(340%) skewX(-15deg);} }
+  .capsule-inner{
+    position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+    animation:idleFloat 3.8s ease-in-out infinite;
+  }
+  @keyframes idleFloat{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);} }
+  .capsule .lock-glow{
+    position:absolute; width:48px; height:48px; border-radius:50%; top:-6px; left:50%;
+    background:radial-gradient(circle, rgba(240,185,58,.5), rgba(124,92,255,.25) 55%, transparent 75%);
+    transform:translate(-50%,-50%); animation:glowPulse 2.4s ease-in-out infinite; pointer-events:none;
+  }
+  @keyframes glowPulse{ 0%,100%{opacity:.55; transform:translate(-50%,-50%) scale(1);} 50%{opacity:1; transform:translate(-50%,-50%) scale(1.22);} }
+  .capsule .lock-ic{width:22px; height:22px; stroke:var(--gold-soft); position:relative; z-index:2; margin-bottom:2px;}
+  .capsule .num{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:1.5rem; color:var(--violet-soft); font-variant-numeric:tabular-nums; position:relative; z-index:2;}
+  .capsule .ic{width:24px; height:24px; stroke:var(--cyan); opacity:.85;}
+  .capsule .tag{font-size:.6rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; position:relative; z-index:2;}
+
+  .capsule.done{cursor:default; opacity:1;}
+  .capsule.done .shine{display:none;}
+  .capsule.done .capsule-inner{animation:none;}
+  .capsule.done.correct{border-color:rgba(52,211,153,.55); background:linear-gradient(165deg, rgba(52,211,153,.2), #182047 60%, #10152a 100%); animation:donePop .45s ease;}
+  .capsule.done.wrong{border-color:rgba(251,107,107,.55); background:linear-gradient(165deg, rgba(251,107,107,.18), #182047 60%, #10152a 100%); animation:doneShake .45s ease;}
+  @keyframes donePop{ 0%{transform:scale(1);} 45%{transform:scale(1.14);} 100%{transform:scale(1);} }
+  @keyframes doneShake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 50%{transform:translateX(5px);} 75%{transform:translateX(-3px);} }
+  .capsule.done .result-ic{width:30px; height:30px;}
+  .capsule.done.correct .result-ic{stroke:var(--success); filter:drop-shadow(0 0 8px rgba(52,211,153,.6));}
+  .capsule.done.wrong .result-ic{stroke:var(--danger); filter:drop-shadow(0 0 8px rgba(251,107,107,.5));}
+  .capsule.done .pts{font-family:'JetBrains Mono', monospace; font-size:.74rem; color:var(--muted); font-variant-numeric:tabular-nums; position:relative; z-index:2;}
+
+  /* ---------- QUESTION OVERLAY ---------- */
+  .overlay{position:fixed; inset:0; z-index:20; background:rgba(6,8,14,.72); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:20px;}
+  .overlay.active{display:flex;}
+  .qpanel{width:100%; max-width:720px; background:linear-gradient(180deg, var(--panel-hi), var(--panel)); border:1px solid var(--edge); border-radius:20px; padding:clamp(20px,4vw,34px); box-shadow:var(--shadow); position:relative; animation:rise .3s cubic-bezier(.2,.8,.2,1);}
+  @keyframes rise{ from{transform:translateY(24px) scale(.97); opacity:0;} to{transform:translateY(0) scale(1); opacity:1;} }
+  .qpanel.shake{animation:panelShake .4s ease;}
+  @keyframes panelShake{ 0%,100%{transform:translateX(0);} 20%{transform:translateX(-9px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(4px);} }
+
+  .qhead{display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px;}
+  .qhead .badge{font-family:'JetBrains Mono', monospace; font-size:.72rem; color:var(--cyan); background:rgba(45,212,232,.1); border:1px solid rgba(45,212,232,.3); padding:5px 11px; border-radius:999px; letter-spacing:.05em;}
+  .timer{position:relative; width:56px; height:56px; flex:none;}
+  .timer svg{transform:rotate(-90deg); width:56px; height:56px;}
+  .timer circle{fill:none; stroke-width:5;}
+  .timer .track{stroke:var(--edge);}
+  .timer .bar{stroke:var(--cyan); stroke-linecap:round; transition:stroke-dashoffset .2s linear, stroke .3s ease;}
+  .timer .t-val{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono', monospace; font-weight:700; font-size:.9rem; font-variant-numeric:tabular-nums;}
+  .timer.urgent .t-val{animation:urgentPulse .6s ease-in-out infinite;}
+  @keyframes urgentPulse{ 0%,100%{transform:scale(1); color:var(--text);} 50%{transform:scale(1.18); color:var(--danger);} }
+
+  .skill-tag{display:inline-block; font-family:'JetBrains Mono', monospace; font-size:.66rem; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-soft); background:rgba(240,185,58,.1); border:1px solid rgba(240,185,58,.3); padding:3px 9px; border-radius:999px; margin-bottom:10px;}
+  .qtext{font-family:'Unbounded', sans-serif; font-weight:600; font-size:clamp(1rem,2.4vw,1.22rem); line-height:1.45; margin:0 0 20px; text-wrap:balance;}
+
+  .options{display:grid; gap:11px;}
+  .opt{display:flex; align-items:center; gap:12px; text-align:left; background:rgba(255,255,255,.03); border:1.5px solid var(--edge); border-radius:12px; padding:14px 16px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:.95rem; font-weight:600; cursor:pointer; transition:border-color .15s ease, background .15s ease, transform .1s ease;}
+  .opt:hover:not(:disabled){border-color:var(--violet-soft); background:rgba(124,92,255,.08); transform:translateX(3px);}
+  .opt .letter{font-family:'Unbounded', sans-serif; font-weight:700; font-size:.78rem; width:26px; height:26px; border-radius:7px; flex:none; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.06); color:var(--muted);}
+  .opt:disabled{cursor:default;}
+  .opt.correct{border-color:var(--success); background:rgba(52,211,153,.12); animation:optPop .4s ease;}
+  .opt.correct .letter{background:var(--success); color:#062018;}
+  .opt.wrong{border-color:var(--danger); background:rgba(251,107,107,.12);}
+  .opt.wrong .letter{background:var(--danger); color:#2a0808;}
+  .opt.dim{opacity:.4;}
+  @keyframes optPop{ 0%{transform:scale(1);} 45%{transform:scale(1.03);} 100%{transform:scale(1);} }
+
+  .feedback{margin-top:18px; padding:16px 18px; border-radius:12px; display:none; gap:10px; align-items:flex-start; animation:rise .25s ease;}
+  .feedback.show{display:flex;}
+  .feedback.ok{background:rgba(52,211,153,.1); border:1px solid rgba(52,211,153,.35);}
+  .feedback.bad{background:rgba(251,107,107,.1); border:1px solid rgba(251,107,107,.35);}
+  .feedback .fic{width:22px; height:22px; flex:none; margin-top:1px;}
+  .feedback.ok .fic{stroke:var(--success);}
+  .feedback.bad .fic{stroke:var(--danger);}
+  .feedback .ftitle{font-weight:800; font-size:.92rem; margin:0 0 3px;}
+  .feedback.ok .ftitle{color:var(--success);}
+  .feedback.bad .ftitle{color:var(--danger);}
+  .feedback p{margin:0; font-size:.88rem; color:var(--text); line-height:1.5;}
+  .feedback .pts-earned{font-family:'JetBrains Mono', monospace; font-size:.78rem; color:var(--cyan); margin-top:6px; display:block;}
+
+  .next-btn{margin-top:18px; width:100%; font-family:'Unbounded', sans-serif; font-weight:700; font-size:.9rem; color:#0a0e17; background:linear-gradient(135deg, var(--cyan), var(--violet-soft)); border:none; border-radius:11px; padding:14px; cursor:pointer; display:none;}
+  .next-btn.show{display:block;}
+  .next-btn:hover{filter:brightness(1.06);}
+
+  /* ---------- DICE OVERLAY ---------- */
+  .dice-overlay{position:fixed; inset:0; z-index:25; background:rgba(6,8,14,.8); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:20px;}
+  .dice-overlay.active{display:flex;}
+  .dice-panel{width:100%; max-width:480px; text-align:center; background:linear-gradient(180deg, var(--panel-hi), var(--panel)); border:1px solid var(--edge); border-radius:22px; padding:clamp(28px,5vw,44px) 26px; box-shadow:var(--shadow); animation:rise .3s cubic-bezier(.2,.8,.2,1); position:relative; overflow:hidden;}
+  .dice-panel::before{content:''; position:absolute; top:-40%; left:50%; transform:translateX(-50%); width:420px; height:320px; background:radial-gradient(circle, rgba(240,185,58,.22), transparent 70%); pointer-events:none; animation:drift3 14s ease-in-out infinite alternate;}
+  .dice-face{width:64px; height:64px; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; background:linear-gradient(160deg, var(--gold-soft), var(--gold)); border-radius:16px; box-shadow:0 10px 24px -8px rgba(240,185,58,.6); transform-style:preserve-3d;}
+  .dice-face.spin{animation:diceSpin3d .5s cubic-bezier(.3,.7,.4,1) infinite;}
+  .dice-face.land{animation:diceLand .55s cubic-bezier(.2,.9,.3,1.4);}
+  @keyframes diceSpin3d{ 0%{transform:rotateX(0) rotateY(0);} 100%{transform:rotateX(360deg) rotateY(180deg);} }
+  @keyframes diceLand{ 0%{transform:scale(.7) rotate(-15deg);} 60%{transform:scale(1.15) rotate(4deg);} 100%{transform:scale(1) rotate(0);} }
+  .dice-face svg{width:34px; height:34px; stroke:#241505;}
+  .dice-label{font-family:'JetBrains Mono', monospace; font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;}
+  .dice-reel{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:1.3rem; color:var(--muted); min-height:2.6em; display:flex; align-items:center; justify-content:center; padding:0 8px;}
+  .dice-result{font-family:'Unbounded', sans-serif; font-weight:800; font-size:clamp(1.3rem,4vw,1.7rem); color:var(--gold-soft); min-height:2.6em; display:flex; align-items:center; justify-content:center; text-wrap:balance; padding:0 8px; line-height:1.3; animation:rise .3s ease;}
+  .dice-pool{font-family:'JetBrains Mono', monospace; font-size:.72rem; color:var(--muted); margin-top:6px;}
+  .dice-btns{display:flex; gap:10px; margin-top:20px;}
+  .dice-btns button{flex:1; font-family:'Unbounded', sans-serif; font-weight:700; font-size:.85rem; border-radius:11px; padding:13px; cursor:pointer; border:none; transition:transform .15s ease;}
+  .dice-btns button:hover{transform:translateY(-2px);}
+  #diceSpinBtn{color:#241505; background:linear-gradient(135deg, var(--gold-soft), var(--gold));}
+  #diceDoneBtn{display:none; color:var(--text); background:transparent; border:1.5px solid var(--edge);}
+  #diceDoneBtn.show{display:block;}
+  #diceDoneBtn:hover{border-color:var(--violet-soft); background:rgba(124,92,255,.08);}
+
+  /* ---------- FINAL ---------- */
+  .final{display:none;}
+  .final.active{display:flex;}
+  .final{flex-direction:column; align-items:center; text-align:center; gap:8px; background:linear-gradient(180deg, var(--panel-hi), var(--panel)); border:1px solid var(--edge); border-radius:20px; padding:clamp(28px,6vw,56px) 24px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .final::before{content:''; position:absolute; top:-30%; left:50%; transform:translateX(-50%); width:600px; height:400px; background:radial-gradient(circle, rgba(124,92,255,.22), transparent 70%); pointer-events:none; animation:drift1 16s ease-in-out infinite alternate;}
+  .final .trophy{width:64px; height:64px; stroke:var(--cyan); margin-bottom:6px; animation:trophyPop .6s cubic-bezier(.2,.9,.3,1.4);}
+  @keyframes trophyPop{ 0%{transform:scale(0) rotate(-30deg); opacity:0;} 100%{transform:scale(1) rotate(0); opacity:1;} }
+  .final .fscore{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:clamp(2.6rem,9vw,4rem); color:var(--cyan); font-variant-numeric:tabular-nums; line-height:1; margin:6px 0;}
+  .final .flabel{font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
+  .final h2{font-family:'Unbounded', sans-serif; font-weight:800; font-size:clamp(1.3rem,3.4vw,1.8rem); margin:14px 0 4px; max-width:26ch; text-wrap:balance;}
+  .final p.sub{margin:0 0 20px; color:var(--muted); max-width:44ch; font-size:.95rem; line-height:1.5;}
+  .final-stats{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-bottom:26px;}
+  .fstat{background:rgba(255,255,255,.04); border:1px solid var(--edge); border-radius:12px; padding:12px 20px; min-width:110px;}
+  .fstat .n{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.3rem; font-variant-numeric:tabular-nums;}
+  .fstat.ok .n{color:var(--success);}
+  .fstat.bad .n{color:var(--danger);}
+  .fstat .l{font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:2px;}
+  .restart-btn{font-family:'Unbounded', sans-serif; font-weight:700; font-size:.9rem; color:var(--text); background:transparent; border:1.5px solid var(--edge); border-radius:12px; padding:13px 28px; cursor:pointer; transition:border-color .15s ease, background .15s ease, transform .15s ease;}
+  .restart-btn:hover{border-color:var(--violet-soft); background:rgba(124,92,255,.08); transform:translateY(-2px);}
+
+  .credit{text-align:center; font-size:.72rem; color:var(--muted); padding:4px 0 6px; letter-spacing:.02em;}
+
+  .confetti-canvas{position:fixed; inset:0; z-index:40; pointer-events:none;}
+
+  @media (prefers-reduced-motion: reduce){ *{animation-duration:.001s !important; transition-duration:.001s !important;} }
+</style>
+
+<div class="noise"></div>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="blob blob3"></div>
+
+<div id="app">
+
+  <header class="hud">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0a0e17" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l3 5-6 13L3 8z"/><path d="M3 8h18"/><path d="M9 3l3 5 3-5"/></svg>
+      </div>
+      <div>
+        <h1>Sala de Salida</h1>
+        <p>Ticket de cierre · 3° medio</p>
+      </div>
+    </div>
+    <div class="hud-right">
+      <button class="dice-btn" id="diceOpenBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="#241505" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="#241505" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="#241505" stroke="none"/></svg>
+        Sortear estudiante
+      </button>
+      <div class="hud-stats">
+        <div class="stat"><p class="label">Puntaje</p><p class="value" id="scoreVal">0</p></div>
+        <div class="stat score"><p class="label">Progreso</p><p class="value" id="progVal">0/13</p></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="progress-wrap" id="progressWrap"><div class="progress-track" id="progressTrack"></div></div>
+
+  <!-- INTRO -->
+  <section class="intro" id="introScreen">
+    <span class="eyebrow">Ticket de salida · Refuerzo general de probabilidad</span>
+    <h2>13 llaves para salir. <span>100 segundos</span> cada una.</h2>
+    <p>Sortea con el dado quién responde, elige una cápsula y resuelve el problema. Cálculos breves, pensados para cerrar la clase con buen ritmo.</p>
+    <div class="intro-meta">
+      <span class="meta-chip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>100 s por pregunta</span>
+      <span class="meta-chip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1"/><circle cx="15.5" cy="15.5" r="1"/><circle cx="12" cy="12" r="1"/></svg>Dado de estudiantes</span>
+      <span class="meta-chip"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/></svg>13 cápsulas</span>
+    </div>
+    <button class="start-btn" id="startBtn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0a0e17" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+      Iniciar ticket de salida
+    </button>
+  </section>
+
+  <!-- GRID -->
+  <section class="grid-wrap" id="gridScreen">
+    <div class="grid-title"><h3>Elige una cápsula</h3><span id="gridHint">Quedan 13 por responder</span></div>
+    <div class="capsules" id="capsuleGrid"></div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="final" id="finalScreen">
+    <svg class="trophy" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a3 3 0 0 0 3 5"/><path d="M17 5h3a3 3 0 0 1-3 5"/></svg>
+    <p class="flabel">Puntaje final</p>
+    <p class="fscore" id="finalScore">0</p>
+    <h2 id="finalTitle">¡Ticket de salida completado!</h2>
+    <p class="sub" id="finalSub">Revisa el desempeño del curso.</p>
+    <div class="final-stats">
+      <div class="fstat ok"><div class="n" id="finalCorrect">0</div><div class="l">Correctas</div></div>
+      <div class="fstat bad"><div class="n" id="finalWrong">0</div><div class="l">Incorrectas</div></div>
+      <div class="fstat"><div class="n" id="finalAvg">0s</div><div class="l">Tiempo prom.</div></div>
+    </div>
+    <button class="restart-btn" id="restartBtn">Jugar de nuevo</button>
+  </section>
+
+  <p class="credit">Diseñado para la Profesora Aylen</p>
+</div>
+
+<!-- QUESTION OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="qpanel" id="qpanel">
+    <div class="qhead">
+      <span class="badge" id="qBadge">CÁPSULA 01 · 1/13</span>
+      <div class="timer" id="timerWrap">
+        <svg viewBox="0 0 56 56"><circle class="track" cx="28" cy="28" r="24"></circle><circle class="bar" id="timerBar" cx="28" cy="28" r="24" stroke-dasharray="150.8" stroke-dashoffset="0"></circle></svg>
+        <div class="t-val" id="timerVal">100</div>
+      </div>
+    </div>
+    <span class="skill-tag" id="skillTag">Resolver problemas</span>
+    <p class="qtext" id="qText">Pregunta</p>
+    <div class="options" id="optionsWrap"></div>
+    <div class="feedback" id="feedback">
+      <svg class="fic" id="feedbackIcon" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      <div>
+        <p class="ftitle" id="feedbackTitle">Correcto</p>
+        <p id="feedbackText">Explicación breve.</p>
+        <span class="pts-earned" id="feedbackPts">+150 pts</span>
+      </div>
+    </div>
+    <button class="next-btn" id="nextBtn">Continuar</button>
+  </div>
+</div>
+
+<!-- DICE OVERLAY -->
+<div class="dice-overlay" id="diceOverlay">
+  <div class="dice-panel">
+    <div class="dice-face" id="diceFace"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="#241505" stroke="none"/><circle cx="15.5" cy="8.5" r="1.3" fill="#241505" stroke="none"/><circle cx="8.5" cy="15.5" r="1.3" fill="#241505" stroke="none"/><circle cx="15.5" cy="15.5" r="1.3" fill="#241505" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="#241505" stroke="none"/></svg></div>
+    <p class="dice-label">Sorteando estudiante…</p>
+    <div class="dice-reel" id="diceReel">—</div>
+    <div class="dice-result" id="diceResult"></div>
+    <p class="dice-pool" id="dicePool"></p>
+    <div class="dice-btns">
+      <button id="diceSpinBtn">Girar el dado</button>
+      <button id="diceDoneBtn">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ---------------- STUDENTS ----------------
+  var STUDENTS_RAW = [
+    "AGUILERA LAGOS ISIDORA","AVILA FICA JOSEFA","CARRIL BASTIAS MAXIMILIANO","COLQUE SILVA MARTINA",
+    "CONTRERAS MEDINA LAURITA","CORNEJO RAMIREZ MATÍAS","FARIAS CUEVAS JAVIER","FAUNDEZ RIVERA PAULA",
+    "GONZÁLEZ BENIÍTEZ EMILIA","GONZALEZ FIGUEROA SOFIA","GONZÁLEZ HERNÁNDEZ VALENTINA","GONZALEZ METUAZE CLAUDIO SAID",
+    "GUTIERREZ SILVA JUAN IGNACIO","IBAÑEZ CHAMBLAS SEBASTIAN","JIMENEZ GARCES EMILIA","LEITON INOSTROZA FERNANDA",
+    "MALDONADO CHAMORRO MARLYS","MARTÍNEZ GUZMAN ANTONELLA","MARTÍNEZ MARTÍNEZ MARIANO","MARTÍNEZ SANHUEZA JAVIERA",
+    "MEDINA ARAVENA JAVIER","MERCADO FAÚNDEZ AMANDA","MONTECINOS GUZMAN MARIA IGNACIA","NAVARRO MONSALVEZ VICENTE",
+    "PASTRANA TOLOZA FRANCO","PINTO FLORES CRISTOBAL","PROVOSTE HIDALGO MAITE","RIFO REYES JONATHAN",
+    "RODRIGUEZ ASTORGA VICENTE","ROJAS FICA BRANCO","SALAZAR CHAMORRO DAVID","SANHUEZA FAÚNDEZ GULIANA",
+    "SEPÚLVEDA SALGADO EMILIO","SILVA LAGOS AGUSTINA","TOLEDO MARTÍNEZ OSCAR","TORRES GUZMAN DANIELA",
+    "VENEGAS CASTRO FRANCISCO","VILLAGRA VILLEGAS BENJAMÍN","ZAMBRANO MATURANA AGUSTIN"
+  ];
+  function titleCase(str){ return str.toLowerCase().split(' ').map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1); }).join(' '); }
+  var STUDENTS = STUDENTS_RAW.map(titleCase);
+  var studentPool = [];
+
+  // ---------------- QUESTIONS: ticket de salida (Guía 7, adaptadas) ----------------
+  var QUESTIONS = [
+    {
+      skill:"Argumentar",
+      q:"Una ruleta está numerada del 1 al 9, todos los sectores del mismo tamaño. ¿Cuál de los siguientes eventos es más probable al girarla?",
+      opts:["Que salga un número impar","Que salga un múltiplo de 3","Que salga un múltiplo de 4","Que salga un número primo"],
+      correct:0,
+      exp:"Hay 5 números impares de 9 (1,3,5,7,9): es la mayor proporción entre las alternativas."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"En una bolsa hay 10 fichas numeradas del 1 al 10. Se saca una al azar. ¿Cuál es la probabilidad de que el número sea par o primo?",
+      opts:["1","2/3","4/5","9/10"],
+      correct:2,
+      exp:"Pares o primos cubren 8 de los 10 números (todos menos el 1 y el 9): 8/10 = 4/5."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"Se giran dos ruletas idénticas numeradas del 1 al 6. ¿Cuál es la probabilidad de que en la primera salga un número impar y en la segunda salga un múltiplo de dos?",
+      opts:["1/4","1/6","1/2","1/12"],
+      correct:0,
+      exp:"P(impar) = 1/2 y P(múltiplo de 2) = 1/2; al ser giros independientes se multiplican: 1/2 × 1/2 = 1/4."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"Se gira 3 veces una ruleta numerada del 1 al 8 (sectores iguales). ¿Cuál es la probabilidad de que los dos primeros giros muestren el mismo número y el tercero sea distinto?",
+      opts:["7/8","7/64","1/64","1/512"],
+      correct:1,
+      exp:"El segundo giro debe repetir el primero (1/8) y el tercero debe ser distinto (7/8): 1/8 × 7/8 = 7/64."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"Se lanzan dos dados y una moneda. ¿Cuál es la probabilidad de que en la moneda salga cara y los dados sumen 5?",
+      opts:["1/18","1/36","1/9","1/72"],
+      correct:0,
+      exp:"Hay 4 combinaciones de dos dados que suman 5 (4/36 = 1/9); se multiplica por P(cara) = 1/2: resulta 1/18."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"En una caja hay 12 fichas numeradas del 1 al 12. Se saca una al azar. ¿Cuál es la probabilidad de que el número sea par o divisor de 8?",
+      opts:["1/2","7/12","3/4","5/6"],
+      correct:1,
+      exp:"Pares (6) más divisores de 8 (4), menos los que se repiten (2, 4 y 8): 6+4-3 = 7 de 12."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"En una caja hay solo bolitas rojas, verdes y amarillas. Se sabe que P(no amarilla) = 3/4 y que P(roja o amarilla) = 5/6. ¿Cuál es la probabilidad de sacar una bolita roja?",
+      opts:["1/4","5/12","7/12","3/4"],
+      correct:2,
+      exp:"P(amarilla) = 1 − 3/4 = 1/4. Como P(roja) + P(amarilla) = 5/6, entonces P(roja) = 5/6 − 1/4 = 7/12."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"Bolsa A tiene 3 fichas azules y 3 rojas. Bolsa B tiene 2 fichas azules y 4 rojas. Se saca una ficha de cada bolsa. ¿Cuál es la probabilidad de que ambas sean del mismo color?",
+      opts:["1/2","1/3","1/6","2/3"],
+      correct:0,
+      exp:"P(ambas azules) = 3/6 × 2/6 = 1/6; P(ambas rojas) = 3/6 × 4/6 = 1/3; sumando: 1/6 + 1/3 = 1/2."
+    },
+    {
+      skill:"Argumentar",
+      q:"Un dado de 6 caras está cargado de tal modo que: P(par y mayor que 4) = 0,15; P(impar y menor que 4) = 0,35; P(par y menor que 6) = 0,3. ¿Cuál es la probabilidad de que salga el número 5?",
+      opts:["0,1","0,15","0,2","0,25"],
+      correct:2,
+      exp:"Esas tres probabilidades cubren los números 1, 2, 3, 4 y 6 (suman 0,8); como todo suma 1, P(5) = 1 − 0,8 = 0,2."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"Una caja tiene 8 fichas numeradas del 0 al 7. Se extraen al azar dos fichas, con reposición. ¿Cuál es la probabilidad de que ambas sean pares e iguales entre sí?",
+      opts:["1/16","1/8","1/4","1/64"],
+      correct:0,
+      exp:"Hay 4 números pares posibles; para cada uno, P(ambas veces ese número) = (1/8)² = 1/64. Sumando los 4 casos: 4/64 = 1/16."
+    },
+    {
+      skill:"Representar",
+      q:"Hay dos bolsas con fichas numeradas. En la bolsa 1, P(número par) = 0,7. En la bolsa 2, P(número par) = 0,3. Si se saca una ficha de cada bolsa y se suman los números, ¿qué expresión representa la probabilidad de que la suma sea impar?",
+      opts:["0,7 · 0,3","(0,7·0,7) + (0,3·0,3)","(0,7·0,3) + (0,3·0,7)","(0,7+0,3) · (0,3+0,7)"],
+      correct:1,
+      exp:"La suma es impar si sale par en una bolsa e impar en la otra: par de la bolsa 1 con impar de la bolsa 2 (0,7×0,7) o impar de la bolsa 1 con par de la bolsa 2 (0,3×0,3)."
+    },
+    {
+      skill:"Resolver problemas",
+      q:"Tómbola A: 20 fichas con -3, 30 fichas con 2. Tómbola B: 10 fichas con -1, 40 fichas con 4. Se saca una de cada una y se multiplican. ¿Cuál es la probabilidad de que el producto sea positivo?",
+      opts:["14/25","1/2","3/25","11/25"],
+      correct:0,
+      exp:"El producto es positivo si ambos números tienen el mismo signo: (0,6×0,8) + (0,4×0,2) = 0,48 + 0,08 = 0,56 = 14/25."
+    },
+    {
+      skill:"Representar",
+      q:"Taller A tiene 15 hombres y 5 mujeres. Taller B tiene 10 hombres y 10 mujeres. Si se elige una persona al azar entre ambos talleres, ¿cuál es la probabilidad de que sea mujer o pertenezca al Taller B?",
+      opts:["5/8","3/8","1/2","3/4"],
+      correct:0,
+      exp:"P(mujer)=15/40, P(Taller B)=20/40 y su intersección (mujeres del Taller B)=10/40. Unión: 15/40+20/40-10/40 = 25/40 = 5/8."
+    }
+  ];
+
+  var ICONS = [
+    '<circle cx="12" cy="12" r="2"/><circle cx="12" cy="4" r="1"/><circle cx="12" cy="20" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="20" cy="12" r="1"/>',
+    '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 4v16"/>',
+    '<path d="M4 19h16"/><rect x="6" y="10" width="3" height="9"/><rect x="10.5" y="6" width="3" height="13"/><rect x="15" y="13" width="3" height="6"/>',
+    '<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><circle cx="9" cy="9" r=".6" fill="var(--cyan)"/><circle cx="15" cy="9" r=".6" fill="var(--cyan)"/>',
+    '<path d="M12 3v6l4 4-4 4v4"/><path d="M12 9l-4 4 4 4"/>',
+    '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>'
+  ];
+
+  var TOTAL_Q = QUESTIONS.length; // 13
+
+  // ---------------- STATE ----------------
+  var order = [], results = [], score = 0, activeIndex = -1, timerId = null, timeLeft = 100;
+  var TOTAL_TIME = 100;
+  var audioCtx = null;
+  var diceSpinning = false;
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for(var i=a.length-1;i>0;i--){ var j = Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; }
+    return a;
+  }
+
+  function ensureAudio(){
+    if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+    if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
+  }
+  function tone(freq, start, dur, type, vol){
+    if(!audioCtx) return;
+    var osc = audioCtx.createOscillator(); var gain = audioCtx.createGain();
+    osc.type = type || 'sine'; osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, audioCtx.currentTime+start);
+    gain.gain.linearRampToValueAtTime(vol||0.14, audioCtx.currentTime+start+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+start+dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime+start); osc.stop(audioCtx.currentTime+start+dur+0.02);
+  }
+  function sfxOpen(){ ensureAudio(); tone(520,0,0.09,'triangle',0.12); tone(780,0.05,0.08,'triangle',0.09); }
+  function sfxCorrect(){ ensureAudio(); tone(660,0,0.11,'sine',0.16); tone(880,0.09,0.13,'sine',0.16); tone(1180,0.19,0.16,'sine',0.15); tone(1480,0.32,0.18,'sine',0.12); }
+  function sfxWrong(){ ensureAudio(); tone(220,0,0.16,'sawtooth',0.12); tone(160,0.12,0.22,'sawtooth',0.12); }
+  function sfxTick(){ ensureAudio(); tone(1000,0,0.04,'square',0.05); }
+  function sfxFinish(){ ensureAudio(); [523,659,784,1046,1318].forEach(function(n,i){ tone(n, i*0.13, 0.22,'triangle',0.13); }); }
+  function sfxDiceTick(){ ensureAudio(); tone(700+Math.random()*300,0,0.045,'square',0.06); }
+  function sfxDiceLand(){ ensureAudio(); tone(392,0,0.1,'triangle',0.14); tone(523,0.08,0.16,'triangle',0.16); tone(659,0.16,0.26,'triangle',0.18); }
+
+  // ---------------- CONFETTI ----------------
+  function burstConfetti(x, y, colors){
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var canvas = document.createElement('canvas');
+    canvas.className = 'confetti-canvas';
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    var particles = [];
+    var N = 46;
+    for(var i=0;i<N;i++){
+      var angle = Math.random()*Math.PI*2;
+      var speed = 3 + Math.random()*6;
+      particles.push({
+        x:x, y:y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed - 2,
+        size:3+Math.random()*4, color:colors[Math.floor(Math.random()*colors.length)],
+        rot:Math.random()*Math.PI, vr:(Math.random()-0.5)*0.3, life:1
+      });
+    }
+    var start = null;
+    function frame(ts){
+      if(!start) start = ts;
+      var elapsed = ts - start;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      particles.forEach(function(p){
+        p.vy += 0.18; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.012;
+        ctx.save(); ctx.globalAlpha = Math.max(p.life,0); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.color; ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+        ctx.restore();
+      });
+      if(elapsed < 900){ requestAnimationFrame(frame); } else { canvas.remove(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- SCORE ANIMATION ----------------
+  function animateScore(from, to){
+    var el = document.getElementById('scoreVal');
+    var dur = 500, start = null;
+    function step(ts){
+      if(!start) start = ts;
+      var p = Math.min((ts-start)/dur, 1);
+      var eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(from + (to-from)*eased);
+      if(p < 1){ requestAnimationFrame(step); } else { el.textContent = to; el.classList.add('bump'); setTimeout(function(){ el.classList.remove('bump'); }, 380); }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ---------------- INIT ----------------
+  function init(){
+    order = shuffle(QUESTIONS.map(function(q,i){return i;}));
+    results = order.map(function(){ return {answered:false, correct:false, points:0, time:0}; });
+    score = 0; activeIndex = -1;
+    document.getElementById('scoreVal').textContent = '0';
+    updateProgress();
+    buildGrid();
+    document.getElementById('introScreen').style.display = 'flex';
+    document.getElementById('gridScreen').classList.remove('active');
+    document.getElementById('finalScreen').classList.remove('active');
+    document.getElementById('progressWrap').classList.remove('show');
+  }
+
+  function buildGrid(){
+    var grid = document.getElementById('capsuleGrid'); grid.innerHTML = '';
+    var track = document.getElementById('progressTrack'); track.innerHTML = '';
+    order.forEach(function(qIdx, pos){
+      var cap = document.createElement('button');
+      cap.className = 'capsule'; cap.setAttribute('data-pos', pos);
+      cap.style.animationDelay = (pos*0.05)+'s';
+      cap.innerHTML =
+        '<span class="shine" style="animation-delay:'+(pos*0.3)+'s"></span>'+
+        '<div class="capsule-inner" style="animation-delay:'+(pos*0.15)+'s">'+
+          '<span class="lock-glow"></span>'+
+          '<svg class="lock-ic" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'+
+          '<span class="num">'+String(pos+1).padStart(2,'0')+'</span>'+
+          '<span class="tag">Cápsula</span>'+
+        '</div>';
+      cap.addEventListener('click', function(){ openQuestion(pos); });
+      grid.appendChild(cap);
+      var tick = document.createElement('div'); tick.className = 'tick'; tick.setAttribute('data-pos', pos);
+      track.appendChild(tick);
+    });
+  }
+
+  function updateProgress(){
+    var answered = results.filter(function(r){return r.answered;}).length;
+    document.getElementById('progVal').textContent = answered+'/'+TOTAL_Q;
+    var left = TOTAL_Q-answered;
+    document.getElementById('gridHint').textContent = left===0 ? '¡Todas respondidas!' : 'Quedan '+left+' por responder';
+  }
+
+  document.getElementById('startBtn').addEventListener('click', function(){
+    ensureAudio();
+    document.getElementById('introScreen').style.display = 'none';
+    document.getElementById('gridScreen').classList.add('active');
+    document.getElementById('progressWrap').classList.add('show');
+  });
+  document.getElementById('restartBtn').addEventListener('click', init);
+
+  // ---------------- QUESTION FLOW ----------------
+  var RADIUS = 24, CIRC = 2*Math.PI*RADIUS;
+
+  function openQuestion(pos){
+    if(results[pos].answered) return;
+    sfxOpen();
+    activeIndex = pos;
+    var qIdx = order[pos]; var q = QUESTIONS[qIdx];
+
+    document.getElementById('qBadge').textContent = 'CÁPSULA '+String(pos+1).padStart(2,'0')+' · '+(pos+1)+'/'+TOTAL_Q;
+    document.getElementById('skillTag').textContent = q.skill;
+    document.getElementById('qText').textContent = q.q;
+
+    var wrap = document.getElementById('optionsWrap'); wrap.innerHTML = '';
+    var letters = ['A','B','C','D'];
+    q.opts.forEach(function(opt, i){
+      var btn = document.createElement('button');
+      btn.className = 'opt';
+      btn.innerHTML = '<span class="letter">'+letters[i]+'</span><span>'+opt+'</span>';
+      btn.addEventListener('click', function(){ answer(i); });
+      wrap.appendChild(btn);
+    });
+
+    document.getElementById('feedback').classList.remove('show');
+    document.getElementById('nextBtn').classList.remove('show');
+    document.getElementById('overlay').classList.add('active');
+    document.getElementById('timerWrap').classList.remove('urgent');
+    startTimer();
+  }
+
+  function startTimer(){
+    clearInterval(timerId); timeLeft = TOTAL_TIME;
+    var bar = document.getElementById('timerBar');
+    bar.style.stroke = 'var(--cyan)';
+    bar.setAttribute('stroke-dasharray', CIRC.toFixed(1));
+    bar.setAttribute('stroke-dashoffset', 0);
+    document.getElementById('timerVal').textContent = timeLeft;
+
+    timerId = setInterval(function(){
+      timeLeft -= 1;
+      var frac = timeLeft/TOTAL_TIME;
+      bar.setAttribute('stroke-dashoffset', (CIRC*(1-frac)).toFixed(1));
+      document.getElementById('timerVal').textContent = Math.max(timeLeft,0);
+      if(timeLeft <= 20 && timeLeft > 0){ bar.style.stroke = 'var(--amber)'; }
+      if(timeLeft <= 15 && timeLeft > 0){
+        document.getElementById('timerWrap').classList.add('urgent');
+        if(timeLeft<=10) sfxTick();
+      }
+      if(timeLeft <= 0){ bar.style.stroke = 'var(--danger)'; clearInterval(timerId); answer(-1); }
+    }, 1000);
+  }
+
+  function answer(choiceIdx){
+    clearInterval(timerId);
+    document.getElementById('timerWrap').classList.remove('urgent');
+    var pos = activeIndex; var qIdx = order[pos]; var q = QUESTIONS[qIdx];
+    var isCorrect = choiceIdx === q.correct;
+    var elapsed = TOTAL_TIME - Math.max(timeLeft,0);
+
+    var opts = document.querySelectorAll('#optionsWrap .opt');
+    opts.forEach(function(btn, i){
+      btn.disabled = true;
+      if(i === q.correct) btn.classList.add('correct');
+      else if(i === choiceIdx) btn.classList.add('wrong');
+      else btn.classList.add('dim');
+    });
+
+    var points = 0;
+    var prevScore = score;
+    if(isCorrect){
+      var speedBonus = Math.round((Math.max(timeLeft,0)/TOTAL_TIME) * 100);
+      points = 150 + speedBonus; score += points;
+      sfxCorrect();
+      pulseCapsule(pos, true, points);
+      var rect = document.getElementById('qpanel').getBoundingClientRect();
+      burstConfetti(rect.left+rect.width/2, rect.top+80, ['#7c5cff','#2dd4e8','#f0b93a','#34d399']);
+    } else {
+      sfxWrong();
+      pulseCapsule(pos, false, 0);
+      var panel = document.getElementById('qpanel');
+      panel.classList.remove('shake'); void panel.offsetWidth; panel.classList.add('shake');
+    }
+    animateScore(prevScore, score);
+
+    results[pos] = {answered:true, correct:isCorrect, points:points, time:elapsed};
+
+    var fb = document.getElementById('feedback');
+    var icon = document.getElementById('feedbackIcon');
+    fb.className = 'feedback show ' + (isCorrect ? 'ok' : 'bad');
+    document.getElementById('feedbackTitle').textContent = isCorrect ? '¡Correcto!' : (choiceIdx===-1 ? '¡Tiempo agotado!' : 'Incorrecto');
+    document.getElementById('feedbackText').textContent = q.exp;
+    document.getElementById('feedbackPts').textContent = isCorrect ? ('+'+points+' pts') : '+0 pts';
+    icon.innerHTML = isCorrect ? '<polyline points="20 6 9 17 4 12"/>' : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>';
+
+    document.getElementById('nextBtn').classList.add('show');
+    updateProgress();
+    var t = document.querySelector('.tick[data-pos="'+pos+'"]');
+    if(t) t.classList.add(isCorrect ? 'correct' : 'wrong');
+  }
+
+  function pulseCapsule(pos, correct, pts){
+    var cap = document.querySelector('.capsule[data-pos="'+pos+'"]');
+    if(!cap) return;
+    cap.classList.add('done', correct ? 'correct' : 'wrong');
+    cap.innerHTML =
+      '<svg class="result-ic" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">'+
+      (correct ? '<polyline points="20 6 9 17 4 12"/>' : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>')+
+      '</svg><span class="pts">'+(correct ? '+'+pts : '+0')+' pts</span>';
+    cap.disabled = true;
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', function(){
+    document.getElementById('overlay').classList.remove('active');
+    var answered = results.filter(function(r){return r.answered;}).length;
+    if(answered >= TOTAL_Q){ setTimeout(showFinal, 300); }
+  });
+
+  function showFinal(){
+    sfxFinish();
+    document.getElementById('gridScreen').classList.remove('active');
+    document.getElementById('finalScreen').classList.add('active');
+    var correctCount = results.filter(function(r){return r.correct;}).length;
+    var wrongCount = TOTAL_Q - correctCount;
+    var avgTime = Math.round(results.reduce(function(s,r){return s+r.time;},0)/TOTAL_Q);
+    var pct = correctCount/TOTAL_Q;
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalCorrect').textContent = correctCount;
+    document.getElementById('finalWrong').textContent = wrongCount;
+    document.getElementById('finalAvg').textContent = avgTime+'s';
+    var title, sub;
+    if(pct >= 0.85){ title = '¡Salieron con todas las llaves!'; sub = 'El curso domina el repaso general de probabilidad. Excelente cierre de unidad.'; }
+    else if(pct >= 0.6){ title = 'Muy buen cierre de clase'; sub = 'Conviene repasar los casos donde se combinan varias condiciones (uniones e intersecciones).'; }
+    else if(pct >= 0.35){ title = 'Vamos por buen camino'; sub = 'Repasemos juntos cuándo sumar y cuándo multiplicar probabilidades antes de la próxima clase.'; }
+    else { title = 'Sigamos reforzando'; sub = 'Volvamos a revisar los ejemplos de la guía antes del próximo ticket de salida.'; }
+    document.getElementById('finalTitle').textContent = title;
+    document.getElementById('finalSub').textContent = sub;
+    var rect = document.getElementById('finalScreen').getBoundingClientRect();
+    burstConfetti(rect.left+rect.width/2, rect.top+60, ['#7c5cff','#2dd4e8','#f0b93a','#34d399']);
+  }
+
+  // ---------------- DICE ----------------
+  document.getElementById('diceOpenBtn').addEventListener('click', function(){
+    ensureAudio();
+    document.getElementById('diceOverlay').classList.add('active');
+    document.getElementById('diceReel').textContent = '—';
+    document.getElementById('diceReel').style.display = 'flex';
+    document.getElementById('diceResult').textContent = '';
+    document.getElementById('diceDoneBtn').classList.remove('show');
+    updateDicePool();
+  });
+  document.getElementById('diceDoneBtn').addEventListener('click', function(){
+    document.getElementById('diceOverlay').classList.remove('active');
+  });
+  document.getElementById('diceSpinBtn').addEventListener('click', spinDice);
+
+  function updateDicePool(){
+    if(studentPool.length===0) studentPool = shuffle(STUDENTS.slice());
+    document.getElementById('dicePool').textContent = 'Quedan '+studentPool.length+' estudiantes sin salir en esta ronda';
+  }
+
+  function spinDice(){
+    if(diceSpinning) return;
+    ensureAudio();
+    diceSpinning = true;
+    var face = document.getElementById('diceFace');
+    face.classList.remove('land'); face.classList.add('spin');
+    document.getElementById('diceSpinBtn').disabled = true;
+    document.getElementById('diceDoneBtn').classList.remove('show');
+    document.getElementById('diceResult').textContent = '';
+    var reelEl = document.getElementById('diceReel');
+    reelEl.style.display = 'flex';
+
+    if(studentPool.length===0) studentPool = shuffle(STUDENTS.slice());
+    var idx = Math.floor(Math.random()*studentPool.length);
+    var chosen = studentPool.splice(idx,1)[0];
+
+    var delays = [65,65,70,75,85,95,110,130,155,185,220,260,310,370,440];
+    var i = 0;
+    function tick(){
+      reelEl.textContent = STUDENTS[Math.floor(Math.random()*STUDENTS.length)];
+      sfxDiceTick();
+      i++;
+      if(i < delays.length){ setTimeout(tick, delays[i]); }
+      else {
+        reelEl.style.display = 'none';
+        document.getElementById('diceResult').textContent = chosen;
+        face.classList.remove('spin'); void face.offsetWidth; face.classList.add('land');
+        sfxDiceLand();
+        updateDicePool();
+        document.getElementById('diceDoneBtn').classList.add('show');
+        document.getElementById('diceSpinBtn').disabled = false;
+        diceSpinning = false;
+      }
+    }
+    tick();
+  }
+
+  init();
+})();
+</script>
